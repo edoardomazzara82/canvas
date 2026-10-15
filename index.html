@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Mie Azioni Quotidiane - Gioco per Alunni NAI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti Library for completion celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f0fdf4;
+            user-select: none;
+        }
+
+        .font-heading {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Custom Animations */
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .selected-card {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4);
+            transform: translateY(-4px);
+        }
+
+        .correct-card {
+            border-color: #22c55e !important;
+            background-color: #f0fdf4 !important;
+            opacity: 0.85;
+            cursor: default;
+        }
+
+        .wrong-card {
+            border-color: #ef4444 !important;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        .card-hover {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover:hover:not(.correct-card) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-emerald-600 text-white shadow-md p-4 sticky top-0 z-20">
+        <div class="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2.5 rounded-2xl">
+                    <i class="fa-solid font-heading text-2xl text-amber-300 fa-clock"></i>
+                </div>
+                <div>
+                    <h1 class="font-heading text-xl sm:text-2xl font-bold tracking-wide">Le Mie Azioni Quotidiane</h1>
+                    <p class="text-xs sm:text-sm text-emerald-100">Collega la frase all'immagine corretta!</p>
+                </div>
+            </div>
+            
+            <!-- Progress & Controls -->
+            <div class="flex items-center gap-4 bg-emerald-700/60 px-4 py-2 rounded-xl">
+                <div class="text-right">
+                    <span id="level-title-display" class="text-xs text-emerald-200 block font-bold uppercase tracking-wider">Livello 1</span>
+                    <span id="score-text" class="font-heading text-lg font-bold text-amber-300">0 / 6</span>
+                </div>
+                <button id="btn-restart" onclick="initGame()" class="bg-amber-400 hover:bg-amber-300 text-amber-950 px-3 py-1.5 rounded-lg font-bold text-sm transition flex items-center gap-1.5 shadow-sm active:scale-95">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Ricomincia</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto w-full p-4 sm:p-6 flex-grow flex flex-col gap-6">
+
+        <!-- Level Selector Navigation -->
+        <div class="flex items-center justify-between bg-white border border-emerald-200 rounded-2xl p-3 shadow-sm overflow-x-auto gap-2">
+            <span class="font-heading font-bold text-xs sm:text-sm text-slate-500 uppercase tracking-wider pl-2 flex-shrink-0">Livelli:</span>
+            <div class="flex gap-2 flex-grow justify-around min-w-[320px]">
+                <button onclick="changeLevel(1)" id="lvl-btn-1" class="lvl-selector-btn px-3 py-1.5 rounded-xl font-heading font-bold text-sm transition bg-emerald-600 text-white shadow-md">Liv. 1</button>
+                <button onclick="changeLevel(2)" id="lvl-btn-2" class="lvl-selector-btn px-3 py-1.5 rounded-xl font-heading font-bold text-sm transition bg-slate-100 text-slate-600 hover:bg-emerald-100">Liv. 2</button>
+                <button onclick="changeLevel(3)" id="lvl-btn-3" class="lvl-selector-btn px-3 py-1.5 rounded-xl font-heading font-bold text-sm transition bg-slate-100 text-slate-600 hover:bg-emerald-100">Liv. 3</button>
+                <button onclick="changeLevel(4)" id="lvl-btn-4" class="lvl-selector-btn px-3 py-1.5 rounded-xl font-heading font-bold text-sm transition bg-slate-100 text-slate-600 hover:bg-emerald-100">Liv. 4</button>
+                <button onclick="changeLevel(5)" id="lvl-btn-5" class="lvl-selector-btn px-3 py-1.5 rounded-xl font-heading font-bold text-sm transition bg-slate-100 text-slate-600 hover:bg-emerald-100">Liv. 5</button>
+            </div>
+        </div>
+
+        <!-- Instruction Banner -->
+        <div class="bg-white border border-emerald-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                    <i class="fa-solid fa-hand-pointer"></i>
+                </div>
+                <p class="text-sm sm:text-base text-slate-700">
+                    <strong>Come si gioca:</strong> Clicca prima su una <strong>frase</strong> (o ascoltala con l'altoparlante <i class="fa-solid fa-volume-high text-emerald-600"></i>) e poi sulla sua <strong>immagine</strong>!
+                </p>
+            </div>
+        </div>
+
+        <!-- Feedback Message Alert -->
+        <div id="feedback-box" class="hidden rounded-xl p-3 text-center font-bold text-sm sm:text-base transition-all duration-300 transform scale-95"></div>
+
+        <!-- Game Boards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            
+            <!-- Sentences Column -->
+            <div class="flex flex-col gap-3">
+                <h2 class="font-heading text-lg font-bold text-slate-700 flex items-center gap-2 px-1">
+                    <i class="fa-solid fa-align-left text-emerald-600"></i> 1. Scegli la frase
+                </h2>
+                <div id="sentences-container" class="flex flex-col gap-3">
+                    <!-- Sentences injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Images Column -->
+            <div class="flex flex-col gap-3">
+                <h2 class="font-heading text-lg font-bold text-slate-700 flex items-center gap-2 px-1">
+                    <i class="fa-regular fa-image text-emerald-600"></i> 2. Trova l'immagine
+                </h2>
+                <div id="images-container" class="grid grid-cols-2 gap-3">
+                    <!-- Images injected dynamically -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Victory Modal -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl transform scale-90 transition-transform duration-300" id="modal-card">
+            <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 shadow-inner">
+                <i class="fa-solid fa-trophy text-amber-500"></i>
+            </div>
+            <h2 id="modal-title" class="font-heading text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Bravissimo/a! 🎉</h2>
+            <p id="modal-desc" class="text-slate-600 mb-6 text-sm sm:text-base">Hai completato questo livello con successo!</p>
+            
+            <div class="flex flex-col gap-2">
+                <button id="next-lvl-btn" onclick="nextLevel(); closeModal();" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-lg py-3 px-6 rounded-2xl shadow-lg hover:shadow-emerald-200 transition active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-arrow-right"></i> Passa al prossimo livello
+                </button>
+                <button onclick="initGame(); closeModal();" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-heading font-bold text-base py-2.5 px-6 rounded-2xl transition active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Ripeti questo livello
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-100 border-t border-slate-200 py-3 text-center text-xs text-slate-500 mt-6">
+        Progetto Didattico NAI - Scuola Secondaria di Primo Grado
+    </footer>
+
+    <script>
+        const levelsData = {
+            1: [ // Livello 1: Azioni di base (Soggetto + Verbo + Complemento lineare)
+                { id: 101, sentence: "Marco fa colazione alle 7:00.", action: "Fare colazione", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="10" y="70" width="80" height="8" rx="2" fill="#94a3b8"/><path d="M 30 70 A 20 20 0 0 1 70 70 Z" fill="#38bdf8"/><rect x="25" y="45" width="6" height="25" fill="#f59e0b"/><circle cx="50" cy="55" r="12" fill="#fef08a"/><ellipse cx="50" cy="55" rx="6" ry="6" fill="#f97316"/></svg>` },
+                { id: 102, sentence: "Sofia si lava i denti.", action: "Lavarsi i denti", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="20" y="35" width="60" height="30" rx="15" fill="#ffffff" stroke="#cbd5e1" stroke-width="4"/><path d="M 30 45 Q 50 55 70 45" stroke="#f43f5e" stroke-width="3" fill="none"/><rect x="40" y="15" width="8" height="45" rx="2" fill="#38bdf8" transform="rotate(25 40 15)"/></svg>` },
+                { id: 103, sentence: "Luca legge un libro.", action: "Leggere", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 20 30 Q 50 20 50 75 Q 20 65 20 30 Z" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/><path d="M 80 30 Q 50 20 50 75 Q 80 65 80 30 Z" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/><line x1="28" y1="40" x2="45" y2="38" stroke="#94a3b8" stroke-width="2"/><line x1="28" y1="50" x2="45" y2="48" stroke="#94a3b8" stroke-width="2"/></svg>` },
+                { id: 104, sentence: "Sara va a scuola.", action: "Andare a scuola", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 20 80 L 80 80 L 80 45 L 50 20 L 20 45 Z" fill="#f87171"/><rect x="40" y="55" width="20" height="25" fill="#78350f"/><polygon points="50,12 15,38 85,38" fill="#dc2626"/></svg>` },
+                { id: 105, sentence: "Elena va a dormire.", action: "Andare a dormire", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="10" y="50" width="80" height="30" rx="4" fill="#818cf8"/><rect x="15" y="40" width="25" height="15" rx="3" fill="#ffffff"/><path d="M 70 15 A 12 12 0 1 0 82 27 A 10 10 0 0 1 70 15 Z" fill="#fef08a"/></svg>` },
+                { id: 106, sentence: "Giuseppe cena in famiglia.", action: "Cenare", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="65" rx="40" ry="15" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/><circle cx="50" cy="63" r="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/><circle cx="50" cy="63" r="8" fill="#f97316"/></svg>` }
+            ],
+            2: [ // Livello 2: Espansioni di tempo e luogo (Preposizioni articolate e orari)
+                { id: 201, sentence: "Il mattino presto Paolo fa la doccia calda.", action: "Fare la doccia", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 30 20 L 70 20 L 60 35 L 40 35 Z" fill="#94a3b8"/><circle cx="50" cy="40" r="3" fill="#38bdf8"/><circle cx="42" cy="55" r="3" fill="#38bdf8"/><circle cx="58" cy="55" r="3" fill="#38bdf8"/><circle cx="50" cy="70" r="4" fill="#38bdf8"/></svg>` },
+                { id: 202, sentence: "Marta prende l'autobus per andare a scuola.", action: "Prendere l'autobus", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="15" y="30" width="70" height="40" rx="8" fill="#f59e0b"/><rect x="22" y="38" width="16" height="15" rx="2" fill="#e0f2fe"/><rect x="42" y="38" width="16" height="15" rx="2" fill="#e0f2fe"/><circle cx="30" cy="70" r="8" fill="#334155"/><circle cx="70" cy="70" r="8" fill="#334155"/></svg>` },
+                { id: 203, sentence: "Alle 11:00 gli studenti fanno ricreazione in cortile.", action: "Fare ricreazione", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="35" cy="45" r="10" fill="#f43f5e"/><circle cx="65" cy="45" r="10" fill="#38bdf8"/><circle cx="50" cy="70" r="12" fill="#22c55e"/></svg>` },
+                { id: 204, sentence: "Luigi torna a casa a piedi nel pomeriggio.", action: "Tornare a casa", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 30 75 L 70 75 L 70 45 L 50 25 L 30 45 Z" fill="#a855f7"/><rect x="43" y="55" width="14" height="20" fill="#fef08a"/></svg>` },
+                { id: 205, sentence: "Anna riordina la sua cartella dopo le lezioni.", action: "Riordinare lo zaino", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="25" y="30" width="50" height="50" rx="10" fill="#ec4899"/><rect x="35" y="20" width="30" height="10" rx="3" fill="#be185d"/><rect x="35" y="45" width="30" height="20" rx="4" fill="#fbcfe8"/></svg>` },
+                { id: 206, sentence: "Il ragazzo ascolta la musica con le cuffie.", action: "Ascoltare la musica", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 25 50 A 25 25 0 0 1 75 50" stroke="#475569" stroke-width="6" fill="none"/><rect x="18" y="45" width="14" height="25" rx="5" fill="#f59e0b"/><rect x="68" y="45" width="14" height="25" rx="5" fill="#f59e0b"/></svg>` }
+            ],
+            3: [ // Livello 3: Verbi riflessivi e azioni coordinate (Prima/Dopo, Connettivi)
+                { id: 301, sentence: "Prima di uscire, Matteo si veste con la tuta sportiva.", action: "Vestirsi", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 30 30 L 70 30 L 80 50 L 68 52 L 65 80 L 35 80 L 32 52 L 20 50 Z" fill="#3b82f6"/><line x1="50" y1="30" x2="50" y2="80" stroke="#1d4ed8" stroke-width="2"/></svg>` },
+                { id: 302, sentence: "Durante il pomeriggio, Giulia fa i compiti di matematica.", action: "Fare i compiti", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="20" y="20" width="60" height="65" rx="4" fill="#fff" stroke="#94a3b8" stroke-width="3"/><line x1="30" y1="35" x2="70" y2="35" stroke="#cbd5e1" stroke-width="4"/><line x1="30" y1="50" x2="70" y2="50" stroke="#cbd5e1" stroke-width="4"/><polygon points="70,80 80,70 88,88" fill="#ef4444"/></svg>` },
+                { id: 303, sentence: "Alle quattro Luca fa merenda con una mela matura.", action: "Fare merenda", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="55" r="22" fill="#ef4444"/><path d="M 50 33 Q 55 25 60 22" stroke="#78350f" stroke-width="3" fill="none"/><path d="M 50 30 Q 60 30 58 38 Z" fill="#22c55e"/></svg>` },
+                { id: 304, sentence: "Dopo lo studio, i ragazzi giocano a calcio al parco.", action: "Giocare a calcio", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="30" fill="#fff" stroke="#1e293b" stroke-width="3"/><polygon points="50,35 60,42 56,54 44,54 40,42" fill="#1e293b"/></svg>` },
+                { id: 305, sentence: "La sera la mamma cucina una zuppa calda per tutti.", action: "Cucinare", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 20 50 L 80 50 L 75 75 A 10 10 0 0 1 65 85 L 35 85 A 10 10 0 0 1 25 75 Z" fill="#64748b"/><path d="M 40 40 Q 42 30 40 20" stroke="#cbd5e1" stroke-width="3" fill="none"/><path d="M 60 40 Q 62 30 60 20" stroke="#cbd5e1" stroke-width="3" fill="none"/></svg>` },
+                { id: 306, sentence: "Prima di cenare, Davide si lava accuratamente le mani.", action: "Lavarsi le mani", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 30 40 Q 50 20 70 40 Q 50 60 30 40 Z" fill="#e0f2fe"/><circle cx="40" cy="45" r="6" fill="#0284c7" opacity="0.6"/><circle cx="60" cy="38" r="8" fill="#0284c7" opacity="0.6"/></svg>` }
+            ],
+            4: [ // Livello 4: Frasi articolate con motivazione/causa (Perché, Per + Infinito)
+                { id: 401, sentence: "Sara accende la lampada da tavolo per studiare meglio.", action: "Accendere la luce", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 35 80 L 65 80 L 55 50 L 45 50 Z" fill="#475569"/><path d="M 30 50 L 70 50 L 60 25 L 40 25 Z" fill="#f59e0b"/><circle cx="50" cy="20" r="8" fill="#fef08a"/></svg>` },
+                { id: 402, sentence: "Per non arrivare in ritardo, Omar corre verso la fermata.", action: "Correre", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="60" cy="25" r="8" fill="#1e293b"/><path d="M 55 33 L 40 50 L 25 45 M 40 50 L 50 65 L 65 80 M 50 65 L 35 80" stroke="#1e293b" stroke-width="5" fill="none" stroke-linecap="round"/></svg>` },
+                { id: 403, sentence: "Maria aiuta il fratello minore a fare i puzzle.", action: "Aiutare i compagni", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="20" y="20" width="28" height="28" rx="4" fill="#f43f5e"/><rect x="52" y="20" width="28" height="28" rx="4" fill="#3b82f6"/><rect x="20" y="52" width="28" height="28" rx="4" fill="#eab308"/><rect x="52" y="52" width="28" height="28" rx="4" fill="#22c55e"/></svg>` },
+                { id: 404, sentence: "Nel tardo pomeriggio, Alessandro porta fuori il cane.", action: "Passeggiare col cane", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="40" cy="60" rx="18" ry="12" fill="#854d0e"/><circle cx="60" cy="50" r="10" fill="#854d0e"/><rect x="30" y="70" width="5" height="15" fill="#854d0e"/><rect x="45" y="70" width="5" height="15" fill="#854d0e"/></svg>` },
+                { id: 405, sentence: "La famiglia guarda un film divertente insieme in salotto.", action: "Guardare la TV", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="15" y="20" width="70" height="45" rx="6" fill="#1e293b"/><rect x="20" y="25" width="60" height="35" rx="2" fill="#38bdf8"/><polygon points="45,35 60,42 45,50" fill="#fff"/><rect x="42" y="65" width="16" height="15" fill="#64748b"/></svg>` },
+                { id: 406, sentence: "In biblioteca la studentessa prende in prestito un romanzo.", action: "Scegliere un libro", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="15" y="20" width="12" height="60" fill="#f43f5e"/><rect x="30" y="15" width="14" height="65" fill="#3b82f6"/><rect x="47" y="25" width="10" height="55" fill="#10b981"/><rect x="60" y="18" width="16" height="62" fill="#f59e0b"/></svg>` }
+            ],
+            5: [ // Livello 5: Frasi complesse con proposizioni temporali e relative
+                { id: 501, sentence: "Quando finisce di cenare, Carlo sparecchia con cura la tavola.", action: "Sparecchiare la tavola", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="65" rx="40" ry="12" fill="#cbd5e1"/><rect x="40" y="30" width="20" height="25" fill="#ffffff" stroke="#64748b" stroke-width="2"/></svg>` },
+                { id: 502, sentence: "Mentre aspetta il campanello, la ragazza ripassa la lezione.", action: "Ripassare la lezione", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="25" y="15" width="50" height="70" rx="4" fill="#fef08a" stroke="#ca8a04" stroke-width="3"/><circle cx="50" cy="40" r="12" fill="#f59e0b"/><path d="M 35 65 L 65 65" stroke="#ca8a04" stroke-width="3"/></svg>` },
+                { id: 503, sentence: "Dopo aver fatto attività sportiva, Lorenzo beve molta acqua fresca.", action: "Bere acqua", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 35 25 L 65 25 L 60 80 L 40 80 Z" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/><path d="M 37 45 L 63 45 L 60 78 L 40 78 Z" fill="#38bdf8"/></svg>` },
+                { id: 504, sentence: "Per mantenere la concentrazione, lo studente spegne lo smartphone.", action: "Spegnere il telefono", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="30" y="15" width="40" height="70" rx="8" fill="#1e293b"/><rect x="34" y="22" width="32" height="50" rx="2" fill="#475569"/><circle cx="50" cy="78" r="3" fill="#fff"/></svg>` },
+                { id: 505, sentence: "Prima di coricarsi, Francesca imposta la sveglia per la mattina.", action: "Impostare la sveglia", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="55" r="28" fill="#f43f5e"/><circle cx="50" cy="55" r="22" fill="#fff"/><polyline points="50,38 50,55 62,55" stroke="#1e293b" stroke-width="4" fill="none"/></svg>` },
+                { id: 506, sentence: "Sulla strada di ritorno, le amiche chiacchierano e ridono felici.", action: "Chiacchierare con amiche", svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 20 40 Q 20 20 45 20 Q 70 20 70 40 Q 70 55 50 55 L 35 65 L 38 53 Q 20 50 20 40 Z" fill="#a855f7"/><circle cx="35" cy="38" r="3" fill="#fff"/><circle cx="45" cy="38" r="3" fill="#fff"/><circle cx="55" cy="38" r="3" fill="#fff"/></svg>` }
+            ]
+        };
+
+        // State variables
+        let currentLevel = 1;
+        let selectedSentence = null;
+        let selectedImage = null;
+        let matchesCount = 0;
+        let totalMatches = 6;
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSuccessSound() {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc1.type = 'sine';
+                osc2.type = 'sine';
+
+                osc1.frequency.setValueAtTime(523.25, now);
+                osc1.frequency.setValueAtTime(659.25, now + 0.12);
+
+                osc2.frequency.setValueAtTime(659.25, now);
+                osc2.frequency.setValueAtTime(783.99, now + 0.12);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.4);
+                osc2.stop(now + 0.4);
+            } catch (e) {}
+        }
+
+        function playErrorSound() {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(180, now + 0.15);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } catch (e) {}
+        }
+
+        function speakText(text, event) {
+            if (event) event.stopPropagation();
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'it-IT';
+                utterance.rate = 0.85;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function changeLevel(lvl) {
+            currentLevel = lvl;
+            // Update level selector buttons active state
+            document.querySelectorAll('.lvl-selector-btn').forEach((btn, index) => {
+                if (index + 1 === lvl) {
+                    btn.className = "lvl-selector-btn px-3 py-1.5 rounded-xl font-heading font-bold text-sm transition bg-emerald-600 text-white shadow-md";
+                } else {
+                    btn.className = "lvl-selector-btn px-3 py-1.5 rounded-xl font-heading font-bold text-sm transition bg-slate-100 text-slate-600 hover:bg-emerald-100";
+                }
+            });
+            initGame();
+        }
+
+        function nextLevel() {
+            if (currentLevel < 5) {
+                changeLevel(currentLevel + 1);
+            } else {
+                changeLevel(1);
+            }
+        }
+
+        function initGame() {
+            selectedSentence = null;
+            selectedImage = null;
+            matchesCount = 0;
+            
+            document.getElementById('level-title-display').innerText = `Livello ${currentLevel}`;
+            updateScoreUI();
+            hideFeedback();
+
+            const currentData = levelsData[currentLevel];
+            totalMatches = currentData.length;
+
+            const sentencesContainer = document.getElementById('sentences-container');
+            const imagesContainer = document.getElementById('images-container');
+
+            sentencesContainer.innerHTML = '';
+            imagesContainer.innerHTML = '';
+
+            const shuffledSentences = shuffleArray(currentData);
+            const shuffledImages = shuffleArray(currentData);
+
+            shuffledSentences.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "card-hover bg-white border-2 border-slate-200 rounded-2xl p-4 flex items-center justify-between cursor-pointer shadow-sm transition-all min-h-[72px]";
+                card.dataset.id = item.id;
+                card.onclick = () => selectSentence(item.id, card);
+
+                card.innerHTML = `
+                    <span class="text-sm sm:text-base font-semibold text-slate-800 pr-2 leading-snug">${item.sentence}</span>
+                    <button onclick="speakText('${item.sentence.replace(/'/g, "\\'")}', event)" 
+                            title="Ascolta la frase"
+                            class="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition flex-shrink-0 active:scale-90">
+                        <i class="fa-solid fa-volume-high text-base sm:text-lg"></i>
+                    </button>
+                `;
+                sentencesContainer.appendChild(card);
+            });
+
+            shuffledImages.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "card-hover bg-white border-2 border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center cursor-pointer shadow-sm transition-all h-36 sm:h-40";
+                card.dataset.id = item.id;
+                card.onclick = () => selectImage(item.id, card);
+
+                card.innerHTML = `
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 mb-1">
+                        ${item.svg}
+                    </div>
+                    <span class="text-[11px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider text-center line-clamp-1">${item.action}</span>
+                `;
+                imagesContainer.appendChild(card);
+            });
+        }
+
+        function selectSentence(id, element) {
+            if (element.classList.contains('correct-card')) return;
+            if (selectedSentence) selectedSentence.element.classList.remove('selected-card');
+
+            selectedSentence = { id, element };
+            element.classList.add('selected-card');
+            checkMatch();
+        }
+
+        function selectImage(id, element) {
+            if (element.classList.contains('correct-card')) return;
+            if (selectedImage) selectedImage.element.classList.remove('selected-card');
+
+            selectedImage = { id, element };
+            element.classList.add('selected-card');
+            checkMatch();
+        }
+
+        function checkMatch() {
+            if (selectedSentence && selectedImage) {
+                if (selectedSentence.id === selectedImage.id) {
+                    handleCorrectMatch(selectedSentence.element, selectedImage.element);
+                } else {
+                    handleWrongMatch(selectedSentence.element, selectedImage.element);
+                }
+                selectedSentence = null;
+                selectedImage = null;
+            }
+        }
+
+        function handleCorrectMatch(sentenceEl, imageEl) {
+            playSuccessSound();
+
+            sentenceEl.classList.remove('selected-card');
+            imageEl.classList.remove('selected-card');
+
+            sentenceEl.classList.add('correct-card');
+            imageEl.classList.add('correct-card');
+
+            sentenceEl.insertAdjacentHTML('beforeend', '<i class="fa-solid fa-circle-check text-emerald-500 text-xl ml-2 flex-shrink-0"></i>');
+            imageEl.insertAdjacentHTML('beforeend', '<i class="fa-solid fa-circle-check text-emerald-500 text-xl mt-1"></i>');
+
+            showFeedback("Ottimo lavoro! Abbinamento corretto! ✨", "success");
+
+            matchesCount++;
+            updateScoreUI();
+
+            if (matchesCount === totalMatches) {
+                setTimeout(showVictory, 600);
+            }
+        }
+
+        function handleWrongMatch(sentenceEl, imageEl) {
+            playErrorSound();
+
+            sentenceEl.classList.remove('selected-card');
+            imageEl.classList.remove('selected-card');
+
+            sentenceEl.classList.add('wrong-card');
+            imageEl.classList.add('wrong-card');
+
+            showFeedback("Quasi! Riprova, ce la puoi fare! 💪", "warning");
+
+            setTimeout(() => {
+                sentenceEl.classList.remove('wrong-card');
+                imageEl.classList.remove('wrong-card');
+            }, 500);
+        }
+
+        function showFeedback(message, type) {
+            const box = document.getElementById('feedback-box');
+            box.innerText = message;
+            box.classList.remove('hidden', 'bg-emerald-100', 'text-emerald-800', 'bg-amber-100', 'text-amber-800', 'bg-rose-100', 'text-rose-800', 'scale-95');
+            box.classList.add('scale-100');
+
+            if (type === 'success') {
+                box.classList.add('bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-300');
+            } else if (type === 'warning') {
+                box.classList.add('bg-amber-100', 'text-amber-800', 'border', 'border-amber-300');
+            } else {
+                box.classList.add('bg-rose-100', 'text-rose-800', 'border', 'border-rose-300');
+            }
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedback-box').classList.add('hidden');
+        }
+
+        function updateScoreUI() {
+            document.getElementById('score-text').innerText = `${matchesCount} / ${totalMatches}`;
+        }
+
+        function showVictory() {
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+
+            const modal = document.getElementById('victory-modal');
+            const modalCard = document.getElementById('modal-card');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDesc = document.getElementById('modal-desc');
+            const nextBtn = document.getElementById('next-lvl-btn');
+
+            if (currentLevel < 5) {
+                modalTitle.innerText = `Livello ${currentLevel} Completato! 🎉`;
+                modalDesc.innerText = `Bravissimo/a! Sei pronto/a per passare al Livello ${currentLevel + 1}?`;
+                nextBtn.innerHTML = `<i class="fa-solid fa-arrow-right"></i> Vai al Livello ${currentLevel + 1}`;
+            } else {
+                modalTitle.innerText = `Fantastico! Hai finito tutti i livelli! 🏆`;
+                modalDesc.innerText = `Hai dimostrato un'ottima conoscenza delle frasi e delle azioni quotidiane!`;
+                nextBtn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Ricomincia dal Livello 1`;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalCard.classList.remove('scale-90');
+                modalCard.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('victory-modal');
+            const modalCard = document.getElementById('modal-card');
+
+            modalCard.classList.remove('scale-100');
+            modalCard.classList.add('scale-90');
+            modal.classList.add('opacity-0');
+
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        window.onload = function() {
+            initGame();
+        };
+    </script>
+</body>
+</html>
